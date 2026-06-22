@@ -30,6 +30,7 @@ export const DEFAULT_UI_STATE: UIState = {
   dashboardSearchQuery: '',
   dashboardStatusFilters: [],
   dashboardFilterPresets: [],
+  timelineStatusFilters: [],
   exportJobs: [],
 };
 

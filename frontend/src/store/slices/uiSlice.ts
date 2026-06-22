@@ -65,6 +65,20 @@ export const uiSlice: StateCreator<AppStore, [], [], UIState & UIActions> = (set
       return { dashboardStatusFilters: next };
     }),
 
+  setTimelineStatusFilters: (statuses: DashboardStatusFilter[]) =>
+    set(() => ({
+      timelineStatusFilters: statuses,
+    })),
+
+  toggleTimelineStatusFilter: (status: DashboardStatusFilter) =>
+    set((state) => {
+      const current = state.timelineStatusFilters;
+      const next = current.includes(status)
+        ? current.filter((s) => s !== status)
+        : [...current, status];
+      return { timelineStatusFilters: next };
+    }),
+
   saveDashboardFilterPreset: (name: string) =>
     set((state) => {
       const now = new Date().toISOString();

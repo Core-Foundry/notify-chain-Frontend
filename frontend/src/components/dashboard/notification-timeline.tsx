@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Circle, Loader2, XCircle, Clock } from "lucide-react";
+import { CheckCircle2, Circle, Loader2, XCircle, Clock, TimerOff } from "lucide-react";
 import { cn } from "@/src/lib/utils";
 import { ChannelIcon } from "@/src/components/dashboard/channel-icon";
 import { timeAgo, type NotificationDelivery, type DeliveryStageStatus } from "@/src/lib/mock-data";
@@ -10,6 +10,7 @@ const iconMap: Record<DeliveryStageStatus, React.ReactNode> = {
   processing: <Loader2 className="size-4 animate-spin text-warning" />,
   failed:     <XCircle className="size-4 text-destructive" />,
   pending:    <Circle className="size-4 text-muted-foreground/40" />,
+  expired:    <TimerOff className="size-4 text-muted-foreground" />,
 };
 
 const lineColor: Record<DeliveryStageStatus, string> = {
@@ -17,6 +18,7 @@ const lineColor: Record<DeliveryStageStatus, string> = {
   processing: "bg-warning",
   failed:     "bg-destructive",
   pending:    "bg-border",
+  expired:    "bg-muted-foreground/40",
 };
 
 interface NotificationTimelineProps {
@@ -106,12 +108,14 @@ function StatusChip({ status }: { status: DeliveryStageStatus }) {
     processing: "bg-warning/10 text-warning border-warning/20",
     failed:     "bg-destructive/10 text-destructive border-destructive/20",
     pending:    "bg-secondary text-muted-foreground border-border",
+    expired:    "bg-muted/60 text-muted-foreground border-muted-foreground/30",
   };
   const labels: Record<DeliveryStageStatus, string> = {
-    completed: "Delivered",
+    completed:  "Delivered",
     processing: "Processing",
-    failed: "Failed",
-    pending: "Pending",
+    failed:     "Failed",
+    pending:    "Pending",
+    expired:    "Expired",
   };
   return (
     <span className={cn("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium shrink-0", styles[status])}>
