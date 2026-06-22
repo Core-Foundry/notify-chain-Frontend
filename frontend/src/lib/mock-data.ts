@@ -3,7 +3,7 @@
 
 export type Chain = "Ethereum" | "Base" | "Arbitrum" | "Optimism" | "Polygon";
 
-export type EventStatus = "delivered" | "pending" | "failed";
+export type EventStatus = "delivered" | "pending" | "failed" | "expired";
 
 export type ChannelType = "webhook" | "email" | "telegram" | "discord";
 
@@ -247,6 +247,34 @@ export const events: ChainEvent[] = [
     matchedRule: null,
     timestamp: new Date(Date.now() - 1000 * 1600).toISOString(),
     args: { user: "0x9911...23ab", amount: "12,000 MATIC" },
+  },
+  {
+    id: "evt_xa01",
+    contract: "Stargate Finance",
+    contractAddress: "0xaf52...9B2a",
+    eventName: "SendMsg",
+    chain: "Optimism",
+    blockNumber: 128984440,
+    txHash: "0xfc12...84de",
+    status: "expired",
+    matchedRule: "Cross-chain transfers",
+    timestamp: new Date(Date.now() - 1000 * 60 * 75).toISOString(),
+    args: { token: "USDC", amount: "250,000", dst: "Ethereum" },
+    failureReason: "Notification TTL of 60 minutes exceeded before endpoint responded.",
+  },
+  {
+    id: "evt_xa02",
+    contract: "Curve Finance",
+    contractAddress: "0xbeB4...71A4",
+    eventName: "TokenExchange",
+    chain: "Polygon",
+    blockNumber: 64140990,
+    txHash: "0x19ab...5e0c",
+    status: "expired",
+    matchedRule: null,
+    timestamp: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
+    args: { buyer: "0x82d1...f3e0", sold: "750,000 DAI", bought: "USDC" },
+    failureReason: "Webhook endpoint unreachable. Notification expired after max retries.",
   },
 ];
 
@@ -808,11 +836,11 @@ export function timeAgo(iso: string | null): string {
 
 // ── Delivery Timeline ──────────────────────────────────────────────────────
 
-export type DeliveryStageStatus = "completed" | "processing" | "failed" | "pending";
+export type DeliveryStageStatus = "completed" | "processing" | "failed" | "pending" | "expired";
 
 export interface DeliveryStage {
   id: string;
-  label: "Created" | "Queued" | "Processing" | "Delivered" | "Failed";
+  label: "Created" | "Queued" | "Processing" | "Delivered" | "Failed" | "Expired";
   status: DeliveryStageStatus;
   timestamp: string | null; // ISO or null if not yet reached
   detail?: string;
@@ -832,14 +860,14 @@ function makeTimeline(
   eventName: string,
   contract: string,
   channel: ChannelType,
-  finalStatus: "delivered" | "failed" | "processing",
+  finalStatus: "delivered" | "failed" | "processing" | "expired",
   baseMs: number
 ): NotificationDelivery {
   const t = (offset: number) =>
     new Date(baseMs + offset).toISOString();
 
   const stageMap: Record<
-    "delivered" | "failed" | "processing",
+    "delivered" | "failed" | "processing" | "expired",
     DeliveryStage[]
   > = {
     delivered: [
@@ -855,10 +883,16 @@ function makeTimeline(
       { id: "s4", label: "Failed",     status: "failed",     timestamp: t(620),   detail: "Connection refused after 3 retries" },
     ],
     processing: [
-      { id: "s1", label: "Created",    status: "completed",  timestamp: t(0),     detail: "Event matched rule" },
-      { id: "s2", label: "Queued",     status: "completed",  timestamp: t(110),   detail: "Added to dispatch queue" },
-      { id: "s3", label: "Processing", status: "processing", timestamp: t(290),   detail: "Awaiting endpoint response…" },
+      { id: "s1", label: "Created",    status: "completed",  timestamp: t(0),         detail: "Event matched rule" },
+      { id: "s2", label: "Queued",     status: "completed",  timestamp: t(110),       detail: "Added to dispatch queue" },
+      { id: "s3", label: "Processing", status: "processing", timestamp: t(290),       detail: "Awaiting endpoint response…" },
       { id: "s4", label: "Delivered",  status: "pending",    timestamp: null },
+    ],
+    expired: [
+      { id: "s1", label: "Created",    status: "completed",  timestamp: t(0),         detail: "Event matched rule" },
+      { id: "s2", label: "Queued",     status: "completed",  timestamp: t(100),       detail: "Added to dispatch queue" },
+      { id: "s3", label: "Processing", status: "completed",  timestamp: t(310),       detail: "Payload built, delivery attempted" },
+      { id: "s4", label: "Expired",    status: "expired",    timestamp: t(3_600_000), detail: "Notification TTL exceeded — dropped after max retries" },
     ],
   };
 
@@ -875,12 +909,14 @@ function makeTimeline(
 const now = Date.now();
 
 export const deliveryTimelines: NotificationDelivery[] = [
-  makeTimeline("evt_9f2a", "Transfer",          "USDC",            "webhook",  "delivered",  now - 1000 * 28),
-  makeTimeline("evt_8d71", "LiquidationCall",   "Aave Pool",       "discord",  "delivered",  now - 1000 * 64),
-  makeTimeline("evt_7c40", "Swap",              "Uniswap V3",      "webhook",  "processing", now - 1000 * 119),
-  makeTimeline("evt_5a18", "Submitted",         "Lido stETH",      "email",    "failed",     now - 1000 * 320),
-  makeTimeline("evt_4f93", "DepositInitiated",  "Arbitrum Bridge", "webhook",  "delivered",  now - 1000 * 488),
-  makeTimeline("evt_1c33", "OrdersMatched",     "Blur Marketplace","webhook",  "processing", now - 1000 * 1240),
+  makeTimeline("evt_9f2a", "Transfer",          "USDC",             "webhook",  "delivered",  now - 1000 * 28),
+  makeTimeline("evt_8d71", "LiquidationCall",   "Aave Pool",        "discord",  "delivered",  now - 1000 * 64),
+  makeTimeline("evt_7c40", "Swap",              "Uniswap V3",       "webhook",  "processing", now - 1000 * 119),
+  makeTimeline("evt_5a18", "Submitted",         "Lido stETH",       "email",    "failed",     now - 1000 * 320),
+  makeTimeline("evt_4f93", "DepositInitiated",  "Arbitrum Bridge",  "webhook",  "delivered",  now - 1000 * 488),
+  makeTimeline("evt_1c33", "OrdersMatched",     "Blur Marketplace", "webhook",  "processing", now - 1000 * 1240),
+  makeTimeline("evt_xa01", "SendMsg",           "Stargate Finance", "webhook",  "expired",    now - 1000 * 60 * 75),
+  makeTimeline("evt_xa02", "TokenExchange",     "Curve Finance",    "email",    "expired",    now - 1000 * 60 * 180),
 ];
 // ---------------------------------------------------------------------------
 // Delivery trend data — used by the configurable delivery-trends chart.

@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import { useMemo, useState, useEffect, Suspense } from "react";
 import {
   Activity,
@@ -21,18 +20,17 @@ import { StatCard } from "@/src/components/dashboard/stat-card";
 import { StatusBadge } from "@/src/components/dashboard/status-badge";
 import { EventVolumeChart } from "@/src/components/dashboard/event-volume-chart";
 import { RetryNotificationModal } from "@/src/components/dashboard/retry-notification-modal";
-import { useUIState, useData } from "@/src/store";
 import { DeliveryHeatmap } from "@/src/components/dashboard/delivery-heatmap";
 import { ChannelMetrics } from "@/src/components/dashboard/channel-metrics";
 import { FilterChipGroup } from "@/src/components/dashboard/filter-chip-group";
 import { DeliveryTrendsChart } from "@/src/components/dashboard/delivery-trends-chart";
-import { useUIState, usePreferences } from "@/src/store";
+import { useUIState, useData, usePreferences } from "@/src/store";
 import { useKeyboardList } from "@/src/lib/use-keyboard-list";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { ExportMenu } from "@/src/components/export-menu";
 import { ColumnToggle } from "@/src/components/column-toggle";
-import type { DashboardFilterPreset, ColumnVisibility } from "@/src/store/types";
+import type { DashboardFilterPreset } from "@/src/store/types";
 import type { ColumnDef } from "@/src/components/column-toggle";
 import {
   dashboardStats,
@@ -43,10 +41,13 @@ import {
   type EventStatus,
 } from "@/src/lib/mock-data";
 
+// ─── Constants ───────────────────────────────────────────────────────────────
+
 const statusTone: Record<EventStatus, "success" | "pending" | "danger"> = {
   delivered: "success",
   pending: "pending",
   failed: "danger",
+  expired: "danger",
 };
 
 const chainFilters = ["All", ...CHAINS] as const;
@@ -65,6 +66,8 @@ function gridTemplate(visibility: Record<string, boolean>): string {
     .map((c) => c.width)
     .join(" ");
 }
+
+// ─── Preset helpers ───────────────────────────────────────────────────────────
 
 function formatFilterSummary(preset: DashboardFilterPreset) {
   const parts = [preset.dashboardChainFilter];
@@ -92,6 +95,8 @@ function sameFilterState(
   );
 }
 
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function DashboardPage() {
   const chain = useUIState((state) => state.dashboardChainFilter);
   const query = useUIState((state) => state.dashboardSearchQuery);
@@ -101,8 +106,6 @@ export default function DashboardPage() {
   const setQuery = useUIState((state) => state.setDashboardSearchQuery);
   const events = useData((state) => state.events);
 
-  // Event whose failed notification is being retried in the modal.
-  const [retryEvent, setRetryEvent] = useState<ChainEvent | null>(null);
   const savePreset = useUIState((state) => state.saveDashboardFilterPreset);
   const updatePreset = useUIState((state) => state.updateDashboardFilterPreset);
   const deletePreset = useUIState((state) => state.deleteDashboardFilterPreset);
@@ -112,6 +115,9 @@ export default function DashboardPage() {
     (state) => state.columnVisibility.dashboard
   ) as Record<string, boolean>;
   const cols = gridTemplate(dashboardVisibility);
+
+  // Event whose failed notification is being retried in the modal.
+  const [retryEvent, setRetryEvent] = useState<ChainEvent | null>(null);
 
   const [isDesktop, setIsDesktop] = useState(false);
   useEffect(() => {
@@ -126,9 +132,7 @@ export default function DashboardPage() {
   const [presetName, setPresetName] = useState("");
   const [presetError, setPresetError] = useState<string | null>(null);
 
-  const { listRef: eventsListRef, getRowProps: getEventRowProps } =
-    useKeyboardList(filtered.length);
-
+  // ── Filtering (memoized for performance) ─────────────────────────────────
   const filtered = useMemo(() => {
     return events.filter((e) => {
       const matchesChain = chain === "All" || e.chain === chain;
@@ -143,12 +147,16 @@ export default function DashboardPage() {
         (statusFilters as string[]).includes(e.status);
       return matchesChain && matchesQuery && matchesStatus;
     });
-  }, [events, chain, query]);
-  }, [chain, query, statusFilters]);
+  }, [events, chain, query, statusFilters]);
+
+  const { listRef: eventsListRef, getRowProps: getEventRowProps } =
+    useKeyboardList(filtered.length);
 
   const activePreset = presets.find((preset) =>
     sameFilterState(chain, query, statusFilters, preset)
   );
+
+  // ── Preset form helpers ───────────────────────────────────────────────────
 
   function openNewPresetForm() {
     setEditingPresetId(null);
@@ -181,13 +189,11 @@ export default function DashboardPage() {
       setPresetError("Give this preset a name before saving.");
       return;
     }
-
     if (editingPresetId) {
       updatePreset(editingPresetId, name);
     } else {
       savePreset(name);
     }
-
     closePresetForm();
   }
 
@@ -198,6 +204,8 @@ export default function DashboardPage() {
       closePresetForm();
     }
   }
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <>
@@ -241,7 +249,7 @@ export default function DashboardPage() {
         {/* Notification metrics by delivery channel */}
         <ChannelMetrics />
 
-        {/* Chart */}
+        {/* Event volume chart */}
         <div className="rounded-xl border border-border bg-card">
           <div className="flex items-center justify-between border-b border-border px-5 py-4">
             <div>
@@ -264,16 +272,18 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Notification activity heatmap — deliveries grouped by hour of day */}
+        {/* Notification activity heatmap */}
         <DeliveryHeatmap />
 
+        {/* Delivery trends */}
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_360px]">
-          {/* Delivery trends */}
           <DeliveryTrendsChart />
         </div>
 
+        {/* Events table + presets sidebar */}
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_360px]">
           <div className="rounded-xl border border-border bg-card">
+            {/* Table header bar */}
             <div className="flex flex-col gap-3 border-b border-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2">
                 <h2 className="text-sm font-medium">Recent events</h2>
@@ -320,6 +330,7 @@ export default function DashboardPage() {
               </Suspense>
             </div>
 
+            {/* Column headers */}
             <div
               className="hidden gap-4 border-b border-border px-5 py-2.5 text-xs font-medium uppercase tracking-wider text-muted-foreground lg:grid"
               style={{ gridTemplateColumns: cols }}
@@ -331,12 +342,13 @@ export default function DashboardPage() {
               ))}
             </div>
 
+            {/* Events list */}
             <ul
-                className="divide-y divide-border"
-                ref={eventsListRef as React.RefObject<HTMLUListElement>}
-                role="listbox"
-                aria-label="Recent events"
-              >
+              className="divide-y divide-border"
+              ref={eventsListRef as React.RefObject<HTMLUListElement>}
+              role="listbox"
+              aria-label="Recent events"
+            >
               {filtered.map((e, index) => (
                 <li
                   key={e.id}
@@ -384,12 +396,22 @@ export default function DashboardPage() {
                   )}
 
                   {dashboardVisibility.status !== false && (
-                    <div>
+                    <div className="flex items-center gap-2">
                       <StatusBadge
                         tone={statusTone[e.status]}
                         label={e.status}
                         pulse={e.status === "pending"}
                       />
+                      {e.status === "failed" ? (
+                        <button
+                          onClick={() => setRetryEvent(e)}
+                          className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10"
+                          aria-label={`Retry notification for ${e.eventName} on ${e.contract}`}
+                        >
+                          <RefreshCw className="size-3" />
+                          Retry
+                        </button>
+                      ) : null}
                     </div>
                   )}
 
@@ -411,13 +433,14 @@ export default function DashboardPage() {
               ))}
             </ul>
 
-            {filtered.length === 0 ? (
+            {filtered.length === 0 && (
               <div className="px-5 py-16 text-center text-sm text-muted-foreground">
                 No events match your filters.
               </div>
-            ) : null}
+            )}
           </div>
 
+          {/* Saved filter presets sidebar */}
           <aside className="space-y-4">
             <div className="rounded-xl border border-border bg-card p-4">
               <div className="flex items-start justify-between gap-3">
@@ -427,7 +450,7 @@ export default function DashboardPage() {
                     <h3 className="text-sm font-medium">Saved filter presets</h3>
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Capture the current chain and search filters for quick reuse.
+                    Capture the current chain, search, and status filters for quick reuse.
                   </p>
                 </div>
                 <Button variant="outline" size="sm" onClick={openNewPresetForm}>
@@ -446,24 +469,7 @@ export default function DashboardPage() {
                 </div>
               )}
 
-                <div className="flex items-center gap-2">
-                  <StatusBadge
-                    tone={statusTone[e.status]}
-                    label={e.status}
-                    pulse={e.status === "pending"}
-                  />
-                  {e.status === "failed" ? (
-                    <button
-                      onClick={() => setRetryEvent(e)}
-                      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10"
-                      aria-label={`Retry notification for ${e.eventName} on ${e.contract}`}
-                    >
-                      <RefreshCw className="size-3" />
-                      Retry
-                    </button>
-                  ) : null}
-                </div>
-              {isFormOpen ? (
+              {isFormOpen && (
                 <div className="mt-4 rounded-xl border border-border bg-background p-4">
                   <div className="flex items-center justify-between gap-2">
                     <div>
@@ -473,7 +479,7 @@ export default function DashboardPage() {
                       <p className="mt-1 text-xs text-muted-foreground">
                         {editingPresetId
                           ? "This will rename the preset while keeping its saved filters."
-                          : "The preset will store the current chain and search filters."}
+                          : "The preset will store the current chain, search, and status filters."}
                       </p>
                     </div>
                   </div>
@@ -502,9 +508,9 @@ export default function DashboardPage() {
                       })}
                     </div>
 
-                    {presetError ? (
+                    {presetError && (
                       <p className="text-xs text-destructive">{presetError}</p>
-                    ) : null}
+                    )}
                   </div>
 
                   <div className="mt-4 flex items-center justify-end gap-2">
@@ -516,7 +522,7 @@ export default function DashboardPage() {
                     </Button>
                   </div>
                 </div>
-              ) : null}
+              )}
 
               <div className="mt-4 space-y-3">
                 {presets.length === 0 ? (
@@ -525,7 +531,7 @@ export default function DashboardPage() {
                   </div>
                 ) : (
                   presets.map((preset) => {
-                    const isCurrent = sameFilterState(chain, query, preset);
+                    const isCurrent = sameFilterState(chain, query, statusFilters, preset);
 
                     return (
                       <div
@@ -538,9 +544,9 @@ export default function DashboardPage() {
                               <h4 className="truncate text-sm font-medium">
                                 {preset.name}
                               </h4>
-                              {isCurrent ? (
+                              {isCurrent && (
                                 <StatusBadge tone="success" label="applied" />
-                              ) : null}
+                              )}
                             </div>
                             <p className="mt-1 text-xs text-muted-foreground">
                               {formatFilterSummary(preset)}

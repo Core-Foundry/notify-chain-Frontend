@@ -3,7 +3,6 @@
  */
 
 import type { ChainEvent, NotificationChannel, NotificationRule, WatchedContract } from '@/src/lib/mock-data';
-import type { NotificationChannel, NotificationRule, WatchedContract, ChainEvent } from '@/src/lib/mock-data';
 
 // Export Types
 export type ExportStatus = 'idle' | 'preparing' | 'processing' | 'completing' | 'completed' | 'failed';
@@ -29,7 +28,7 @@ export type ViewMode = 'grid' | 'list';
 export type Theme = 'light' | 'dark' | 'system';
 
 /** Mirror of EventStatus from mock-data — kept here to avoid a circular dep */
-export type DashboardStatusFilter = 'delivered' | 'pending' | 'failed';
+export type DashboardStatusFilter = 'delivered' | 'pending' | 'failed' | 'expired';
 
 export interface UIState {
   sidebarOpen: boolean;
@@ -39,9 +38,11 @@ export interface UIState {
   // Dashboard filters
   dashboardChainFilter: string;
   dashboardSearchQuery: string;
-  /** Active status filters. Empty array means "show all". */
+  /** Active status filters for the dashboard events feed. Empty array means "show all". */
   dashboardStatusFilters: DashboardStatusFilter[];
   dashboardFilterPresets: DashboardFilterPreset[];
+  /** Active status filters for the delivery timeline page. Empty array means "show all". */
+  timelineStatusFilters: DashboardStatusFilter[];
   // Export jobs
   exportJobs: ExportJob[];
 }
@@ -58,6 +59,10 @@ export interface UIActions {
   setDashboardStatusFilters: (statuses: DashboardStatusFilter[]) => void;
   /** Toggle a single status on/off within the multi-select set. */
   toggleDashboardStatusFilter: (status: DashboardStatusFilter) => void;
+  /** Replace the whole timeline status-filter selection. Pass [] to clear. */
+  setTimelineStatusFilters: (statuses: DashboardStatusFilter[]) => void;
+  /** Toggle a single status on/off within the timeline multi-select set. */
+  toggleTimelineStatusFilter: (status: DashboardStatusFilter) => void;
   saveDashboardFilterPreset: (name: string) => void;
   updateDashboardFilterPreset: (id: string, name: string) => void;
   deleteDashboardFilterPreset: (id: string) => void;

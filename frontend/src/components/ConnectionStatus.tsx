@@ -1,7 +1,7 @@
 'use client';
 
-import { useWebSocket, ConnectionState } from '@/lib/useWebSocket';
-import { cn } from '@/lib/utils'; // or your own class merging utility
+import { useWebSocket, ConnectionState } from '@/src/lib/useWebSocket';
+import { cn } from '@/src/lib/utils';
 
 interface ConnectionStatusProps {
   wsUrl: string;
@@ -18,25 +18,25 @@ const statusConfig: Record<ConnectionState, {
   connected: {
     label: 'Connected',
     dotColor: 'bg-emerald-500',
-    bgColor: 'bg-emerald-50',
-    textColor: 'text-emerald-700',
-    borderColor: 'border-emerald-200',
+    bgColor: 'bg-emerald-50 dark:bg-emerald-950/20',
+    textColor: 'text-emerald-700 dark:text-emerald-400',
+    borderColor: 'border-emerald-200 dark:border-emerald-900/30',
     icon: '●',
   },
   reconnecting: {
     label: 'Reconnecting',
     dotColor: 'bg-amber-500',
-    bgColor: 'bg-amber-50',
-    textColor: 'text-amber-700',
-    borderColor: 'border-amber-200',
+    bgColor: 'bg-amber-50 dark:bg-amber-950/20',
+    textColor: 'text-amber-700 dark:text-amber-400',
+    borderColor: 'border-amber-200 dark:border-amber-900/30',
     icon: '↻',
   },
   offline: {
     label: 'Offline',
     dotColor: 'bg-rose-500',
-    bgColor: 'bg-rose-50',
-    textColor: 'text-rose-700',
-    borderColor: 'border-rose-200',
+    bgColor: 'bg-rose-50 dark:bg-rose-950/20',
+    textColor: 'text-rose-700 dark:text-rose-400',
+    borderColor: 'border-rose-200 dark:border-rose-900/30',
     icon: '✕',
   },
 };

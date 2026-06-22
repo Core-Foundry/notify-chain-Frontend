@@ -1,64 +1,31 @@
 "use client";
 
 /**
- * FilterChipGroup
+ * TimelineFilterChipGroup
  *
- * Renders a row of status filter chips for the dashboard events feed.
- * Behaviour:
+ * Renders a row of status filter chips for the delivery timeline page.
+ * Follows the exact same pattern as FilterChipGroup on the dashboard:
  *   - Multi-select: any combination of statuses can be active simultaneously.
  *   - Empty selection === "show all" (no chips highlighted).
- *   - Selection is kept in sync with the URL via the `status` search param
- *     (comma-separated, e.g. `?status=delivered,failed`).
- *   - Zustand store is updated on every toggle so the rest of the page
- *     reacts instantly without a navigation round-trip.
+ *   - Selection is kept in sync with the URL via the `tl_status` search param
+ *     (comma-separated, e.g. `?tl_status=delivered,expired`).
+ *   - Zustand store is updated on every toggle so the page reacts instantly.
+ *
+ * Uses a separate URL param (`tl_status`) and store slice (`timelineStatusFilters`)
+ * so it never conflicts with the dashboard filter state.
  */
 
 import { useCallback, useEffect } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { CheckCircle2, Clock, XCircle, ListFilter, TimerOff } from "lucide-react";
+import { ListFilter } from "lucide-react";
 import { FilterChip } from "@/src/components/ui/filter-chip";
+import { STATUS_FILTERS } from "@/src/components/dashboard/filter-chip-group";
 import { useUIState } from "@/src/store";
 import type { DashboardStatusFilter } from "@/src/store";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
-export const STATUS_FILTERS: {
-  value: DashboardStatusFilter;
-  label: string;
-  icon: React.ElementType;
-  accentClass: string;
-}[] = [
-  {
-    value: "delivered",
-    label: "Delivered",
-    icon: CheckCircle2,
-    accentClass:
-      "border-primary/30 bg-primary/10 text-primary hover:bg-primary/20",
-  },
-  {
-    value: "pending",
-    label: "Pending",
-    icon: Clock,
-    accentClass:
-      "border-warning/40 bg-warning/10 text-warning hover:bg-warning/15",
-  },
-  {
-    value: "failed",
-    label: "Failed",
-    icon: XCircle,
-    accentClass:
-      "border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/15",
-  },
-  {
-    value: "expired",
-    label: "Expired",
-    icon: TimerOff,
-    accentClass:
-      "border-muted-foreground/30 bg-muted/60 text-muted-foreground hover:bg-muted",
-  },
-];
-
-const URL_PARAM = "status";
+const URL_PARAM = "tl_status";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -77,14 +44,14 @@ function encodeUrlStatuses(statuses: DashboardStatusFilter[]): string {
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export function FilterChipGroup() {
+export function TimelineFilterChipGroup() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const activeFilters = useUIState((s) => s.dashboardStatusFilters);
-  const setFilters = useUIState((s) => s.setDashboardStatusFilters);
-  const toggleFilter = useUIState((s) => s.toggleDashboardStatusFilter);
+  const activeFilters = useUIState((s) => s.timelineStatusFilters);
+  const setFilters = useUIState((s) => s.setTimelineStatusFilters);
+  const toggleFilter = useUIState((s) => s.toggleTimelineStatusFilter);
 
   // ── Hydrate store from URL or sync URL from store on first render ──────────
   useEffect(() => {
@@ -144,7 +111,7 @@ export function FilterChipGroup() {
   return (
     <div
       role="group"
-      aria-label="Filter by notification status"
+      aria-label="Filter deliveries by notification status"
       className="flex flex-wrap items-center gap-1.5"
     >
       <span className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -173,7 +140,7 @@ export function FilterChipGroup() {
           type="button"
           onClick={handleClearAll}
           className="ml-1 text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-          aria-label="Clear all status filters"
+          aria-label="Clear all timeline status filters"
         >
           Clear
         </button>

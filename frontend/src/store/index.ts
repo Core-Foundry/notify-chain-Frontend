@@ -27,13 +27,16 @@ export const useAppStore = create<AppStore>()(
       }),
       {
         name: 'notify-chain-store',
-        version: 3,
+        version: 4,
         migrate: (persistedState, version) => {
           const state = persistedState as Partial<AppStore> | undefined;
           return {
             ...state,
             dashboardFilterPresets: Array.isArray(state?.dashboardFilterPresets)
               ? state.dashboardFilterPresets
+              : [],
+            timelineStatusFilters: Array.isArray(state?.timelineStatusFilters)
+              ? state.timelineStatusFilters
               : [],
           } as Partial<AppStore>;
         },
@@ -57,6 +60,7 @@ export const useAppStore = create<AppStore>()(
           dashboardSearchQuery: state.dashboardSearchQuery,
           dashboardStatusFilters: state.dashboardStatusFilters,
           dashboardFilterPresets: state.dashboardFilterPresets,
+          timelineStatusFilters: state.timelineStatusFilters,
           language: state.language,
           currencyDisplay: state.currencyDisplay,
           notificationsEnabled: state.notificationsEnabled,
@@ -108,6 +112,9 @@ export function useUIState<T>(selector?: (state: AppStore) => T): T | AppStore {
     setDashboardSearchQuery: state.setDashboardSearchQuery,
     setDashboardStatusFilters: state.setDashboardStatusFilters,
     toggleDashboardStatusFilter: state.toggleDashboardStatusFilter,
+    setTimelineStatusFilters: state.setTimelineStatusFilters,
+    toggleTimelineStatusFilter: state.toggleTimelineStatusFilter,
+    timelineStatusFilters: state.timelineStatusFilters,
     saveDashboardFilterPreset: state.saveDashboardFilterPreset,
     updateDashboardFilterPreset: state.updateDashboardFilterPreset,
     deleteDashboardFilterPreset: state.deleteDashboardFilterPreset,
