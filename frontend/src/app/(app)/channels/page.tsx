@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { Plus, Send, Activity } from "lucide-react";
+import { IntegrationModal } from "@/src/components/common/integration-modal";
 import { Topbar } from "@/src/components/dashboard/topbar";
 import { StatusBadge } from "@/src/components/dashboard/status-badge";
 import {
@@ -8,12 +10,14 @@ import {
   channelIcons,
 } from "@/src/components/dashboard/channel-icon";
 import { Button } from "@/src/components/ui/button";
+import { useModal } from "@/src/hooks/use-modal";
 import { useData } from "@/src/store";
 import { ExportMenu } from "@/src/components/export-menu";
 import {
   channelLabels,
   timeAgo,
   type ChannelType,
+  type NotificationChannel,
 } from "@/src/lib/mock-data";
 
 const channelTypeBlurb: Record<ChannelType, string> = {
@@ -26,9 +30,22 @@ const channelTypeBlurb: Record<ChannelType, string> = {
 export default function ChannelsPage() {
   const channels = useData((state) => state.channels);
   const toggleChannel = useData((state) => state.toggleChannel);
+  const addChannel = useData((state) => state.addChannel);
+  const channelModal = useModal();
+  const [selectedIntegrationType, setSelectedIntegrationType] =
+    useState<ChannelType>("webhook");
 
   const connected = channels.filter((c) => c.connected);
   const totalDeliveries = channels.reduce((s, c) => s + c.deliveries24h, 0);
+
+  function openIntegrationModal(type: ChannelType) {
+    setSelectedIntegrationType(type);
+    channelModal.open();
+  }
+
+  function handleChannelCreated(channel: NotificationChannel) {
+    addChannel(channel);
+  }
 
   return (
     <>
@@ -67,7 +84,10 @@ export default function ChannelsPage() {
             <ExportMenu dataType="channels" />
           </div>
           <div className="col-span-2 flex items-center justify-end lg:col-span-1">
-            <Button className="w-full lg:w-auto">
+            <Button
+              className="w-full lg:w-auto"
+              onClick={() => openIntegrationModal(selectedIntegrationType)}
+            >
               <Plus className="size-4" />
               Add channel
             </Button>
@@ -143,15 +163,25 @@ export default function ChannelsPage() {
             {(Object.keys(channelIcons) as ChannelType[]).map((type) => (
               <button
                 key={type}
+                aria-label={`Add ${channelLabels[type]} channel`}
                 className="flex flex-col items-center gap-2 rounded-lg border border-border bg-background p-4 text-sm capitalize transition-colors hover:border-primary/40 hover:text-primary"
+                onClick={() => openIntegrationModal(type)}
+                type="button"
               >
                 <ChannelIcon type={type} className="size-5" />
-                {type}
+                {channelLabels[type]}
               </button>
             ))}
           </div>
         </div>
       </div>
+
+      <IntegrationModal
+        open={channelModal.isOpen}
+        integrationType={selectedIntegrationType}
+        onClose={channelModal.close}
+        onChannelCreated={handleChannelCreated}
+      />
     </>
   );
 }
