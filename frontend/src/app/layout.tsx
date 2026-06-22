@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Providers } from "@/src/components/providers";
 import "./globals.css";
 import { ThemeProvider } from "@/src/components/theme-provider";
 import { WalletProvider } from "@/src/components/wallet-provider";
@@ -51,6 +52,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased`}
         suppressHydrationWarning={true}
       >
+        <Providers>{children}</Providers>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
