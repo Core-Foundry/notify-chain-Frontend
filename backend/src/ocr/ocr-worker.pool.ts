@@ -11,6 +11,13 @@ export class OcrWorkerPool implements OnModuleInit {
 
   async onModuleInit() {
     this.total = parseInt(process.env.MAX_WORKERS ?? '4', 10);
+    // During tests we avoid initializing real tesseract workers to keep tests fast
+    // and not require native dependencies.
+    if (process.env.NODE_ENV === 'test') {
+      this.logger.log(`OCR pool test mode: total=${this.total}`);
+      return;
+    }
+
     await Promise.all(
       Array.from({ length: this.total }, () => this.initWorker()),
     );
